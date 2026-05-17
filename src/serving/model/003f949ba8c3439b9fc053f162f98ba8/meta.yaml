@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/khairul/Downloads/Machine Learning/Customer Churn/mlruns/632569346566612883/003f949ba8c3439b9fc053f162f98ba8/artifacts
+end_time: 1779036852342
+entry_point_name: ''
+experiment_id: '632569346566612883'
+lifecycle_stage: active
+run_id: 003f949ba8c3439b9fc053f162f98ba8
+run_name: popular-croc-276
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1779036814598
+status: 3
+tags: []
+user_id: khairul

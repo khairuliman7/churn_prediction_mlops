@@ -1,0 +1,63 @@
+artifact_path: file:///Users/khairul/Downloads/Machine Learning/Customer Churn/mlruns/632569346566612883/models/m-8d4e19f0f7de4e76a21734a49ea9aa2b/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.9.13
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.0.2
+is_signature_from_type_hint: false
+mlflow_version: 3.1.4
+model_id: m-8d4e19f0f7de4e76a21734a49ea9aa2b
+model_size_bytes: 471017
+model_uuid: m-8d4e19f0f7de4e76a21734a49ea9aa2b
+prompts: null
+run_id: 003f949ba8c3439b9fc053f162f98ba8
+saved_input_example_info:
+  artifact_path: input_example.json
+  pandas_orient: split
+  serving_input_path: serving_input_example.json
+  type: dataframe
+signature:
+  inputs: '[{"type": "long", "name": "age", "required": true}, {"type": "double",
+    "name": "annual_income", "required": true}, {"type": "long", "name": "dependents",
+    "required": true}, {"type": "long", "name": "tenure", "required": true}, {"type":
+    "long", "name": "paperless_billing", "required": true}, {"type": "long", "name":
+    "senior_citizen", "required": true}, {"type": "double", "name": "monthlycharges",
+    "required": true}, {"type": "double", "name": "totalcharges", "required": true},
+    {"type": "long", "name": "num_services", "required": true}, {"type": "long", "name":
+    "has_phone_service", "required": true}, {"type": "long", "name": "has_internet_service",
+    "required": true}, {"type": "long", "name": "has_online_security", "required":
+    true}, {"type": "long", "name": "has_online_backup", "required": true}, {"type":
+    "long", "name": "has_device_protection", "required": true}, {"type": "long", "name":
+    "has_tech_support", "required": true}, {"type": "long", "name": "has_streaming_tv",
+    "required": true}, {"type": "long", "name": "has_streaming_movies", "required":
+    true}, {"type": "double", "name": "customer_satisfaction", "required": true},
+    {"type": "double", "name": "num_complaints", "required": true}, {"type": "long",
+    "name": "num_service_calls", "required": true}, {"type": "long", "name": "late_payments",
+    "required": true}, {"type": "double", "name": "avg_monthly_gb", "required": true},
+    {"type": "long", "name": "days_since_last_interaction", "required": true}, {"type":
+    "double", "name": "credit_score", "required": true}, {"type": "integer", "name":
+    "gender_Male", "required": true}, {"type": "integer", "name": "gender_Other",
+    "required": true}, {"type": "integer", "name": "education_college", "required":
+    true}, {"type": "integer", "name": "education_high_school", "required": true},
+    {"type": "integer", "name": "education_master", "required": true}, {"type": "integer",
+    "name": "education_phd", "required": true}, {"type": "integer", "name": "marital_status_married",
+    "required": true}, {"type": "integer", "name": "marital_status_single", "required":
+    true}, {"type": "integer", "name": "marital_status_widowed", "required": true},
+    {"type": "integer", "name": "contract_one_year", "required": true}, {"type": "integer",
+    "name": "contract_two_year", "required": true}, {"type": "integer", "name": "payment_method_credit_card",
+    "required": true}, {"type": "integer", "name": "payment_method_electronic_check",
+    "required": true}, {"type": "integer", "name": "payment_method_mailed_check",
+    "required": true}]'
+  outputs: '[{"type": "tensor", "tensor-spec": {"dtype": "int64", "shape": [-1]}}]'
+  params: null
+type_hint_from_example: false
+utc_time_created: '2026-05-17 16:54:11.601665'
