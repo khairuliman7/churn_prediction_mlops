@@ -14,16 +14,7 @@ Key responsibility:
     Convert model predictions to user-friendly output
 """
 
-# ALWAYS use ONE consistent model path
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-MODEL_DIR = os.getenv(
-    "MODEL_DIR",
-    os.path.join(
-        BASE_DIR,
-        "model/003f949ba8c3439b9fc053f162f98ba8/artifacts/model"
-    )
-)
+MODEL_DIR = "/app/model"
 
 """
 Model loading configuration
@@ -32,38 +23,41 @@ In production, uses model copied to container at build time
 """
 
 #load the model in MLflow pyfunc format, ensure compatibility
-_model = None
-
-def load_model():
-    global _model
-    if _model is None:
-        _model = mlflow.pyfunc.load_model(MODEL_DIR)
-    return _model
-
-#load the feature file
-FEATURE_FILE = os.getenv(
-    "FEATURE_FILE",
-    os.path.join(
-        BASE_DIR,
-        "model/003f949ba8c3439b9fc053f162f98ba8/artifacts/feature_columns.txt"
-    )
-)
-
 try:
-    with open(FEATURE_FILE, "r") as f:
-        FEATURE_COLS = [line.strip() for line in f if line.strip()]
-
-    print(f"Loaded {len(FEATURE_COLS)} feature columns")
-
+    model = mlflow.pyfunc.load_model(MODEL_DIR)
+    print(f"Model loaded successfully from {MODEL_DIR}")
 except Exception as e:
-    raise Exception(f"Failed to load feature columns from {FEATURE_FILE}: {e}")
+    print(f"Failed to load model from {MODEL_DIR}: {e}")
+    
+    #if cannot, try loading from local ML flow tracking
+    try:
+        import glob
+        local_model_paths = glob.glob("./mlruns/*/*/artifacts/model")
+        if local_model_paths:
+            latest_model = max(local_model_paths, key=os.path.getmtime)
+            model = mlflow.pyfunc.load_model(latest_model)
+            MODEL_DIR = latest_model
+            print(f"Fallback: Loaded model from {latest_model}")
+        else:
+            raise Exception("No model found in local mlruns")
+    except Exception as fallback_error:
+        raise Exception(f"Failed to load model: {e}. Fallback failed: {fallback_error}")
+
+#load the exact feature column order used during training
+try:
+    feature_file = os.path.join(MODEL_DIR, "feature_columns.txt")
+    with open(feature_file) as f:
+        FEATURE_COLS = [ln.strip() for ln in f if ln.strip()]
+    print(f"Loaded {len(FEATURE_COLS)} feature columns from training")
+except Exception as e:
+    raise Exception(f"Failed to load feature columns: {e}")
 
 #mappings must exactly math those used in training
 BINARY_MAP = {
     "paperless_billing": {"No": 0, "Yes": 1},     
 }
 
-NUMERIC_COLS = ["gender", "education", "marital_status", "contract", "payment_method"]
+NUMERIC_COLS = ["gender", "education", "marital_status, contract, payment_method"]
 
 """
 This function 
@@ -109,12 +103,6 @@ def _serve_transform(df: pd.DataFrame) -> pd.DataFrame:
         df[bool_cols] = df[bool_cols].astype(int)
     
     df = df.reindex(columns=FEATURE_COLS, fill_value=0)
-
-    for col in df.columns:
-        if df[col].dtype == "int64":
-            df[col] = df[col].astype("int32")
-        elif df[col].dtype == "float64":
-            df[col] = df[col].astype("float32")
     
     return df
 
@@ -140,50 +128,8 @@ def predict(input_dict: dict) -> str:
     #feature transformation
     df_enc = _serve_transform(df)
     
-    # Match MLflow expected schema exactly
-    int64_cols = [
-        "age", "dependents", "tenure", "paperless_billing",
-        "senior_citizen", "num_services", "has_phone_service",
-        "has_internet_service", "has_online_security",
-        "has_online_backup", "has_device_protection",
-        "has_tech_support", "has_streaming_tv",
-        "has_streaming_movies", "num_service_calls",
-        "late_payments", "days_since_last_interaction"
-    ]
-
-    float64_cols = [
-        "annual_income", "monthlycharges", "totalcharges",
-        "customer_satisfaction", "num_complaints",
-        "avg_monthly_gb", "credit_score"
-    ]
-
-    int32_cols = [
-        "gender_Male", "gender_Other",
-        "education_college", "education_high_school",
-        "education_master", "education_phd",
-        "marital_status_married", "marital_status_single",
-        "marital_status_widowed",
-        "contract_one_year", "contract_two_year",
-        "payment_method_credit_card",
-        "payment_method_electronic_check",
-        "payment_method_mailed_check"
-    ]
-
-    for col in int64_cols:
-        if col in df_enc.columns:
-            df_enc[col] = df_enc[col].astype("int64")
-
-    for col in float64_cols:
-        if col in df_enc.columns:
-            df_enc[col] = df_enc[col].astype("float64")
-
-    for col in int32_cols:
-        if col in df_enc.columns:
-            df_enc[col] = df_enc[col].astype("int32")
-
     #generate prediction
     try:
-        model = load_model()
         preds = model.predict(df_enc)
         
         if hasattr(preds, "tolist"):
