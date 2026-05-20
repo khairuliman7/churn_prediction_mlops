@@ -102,12 +102,13 @@ demo = gr.Interface(
     historical telecom customer data to identify customers at risk of churning.
     """,
     examples=[
-        ["Female", "No", "No", "Yes", "No", "Fiber optic", "No", "No", "No", 
-         "No", "Yes", "Yes", "Month-to-month", "Yes", "Electronic check", 
-         1, 85.0, 85.0],
-        ["Male", "Yes", "Yes", "Yes", "Yes", "DSL", "Yes", "Yes", "Yes",
-         "Yes", "No", "No", "Two year", "No", "Credit card (automatic)",
-         60, 45.0, 2700.0]
+        [
+            40, "Male", 50000, "Bachelor", "Single", 0, 12,
+            "Month to Month", "Electronic Check", "Yes", "No",
+            85.0, 1000.0, 3,
+            "Yes", "Yes", "Yes", "No", "No", "Yes", "Yes", "Yes",
+            5.0, 1, 0, 0, 10.0, 5, 650
+        ]
     ],
     theme=gr.themes.Soft() 
 )
