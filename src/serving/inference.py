@@ -1,6 +1,6 @@
-import os
 import pandas as pd
-import mlflow
+from src.utils.logger import logger
+from typing import Optional
 
 """
 This pipeline is for ML Model production to serve with Consistense Feature
@@ -14,109 +14,8 @@ Key responsibility:
     Convert model predictions to user-friendly output
 """
 
-# ALWAYS use ONE consistent model path
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-MODEL_DIR = os.getenv(
-    "MODEL_DIR",
-    os.path.join(
-        BASE_DIR,
-        "model/003f949ba8c3439b9fc053f162f98ba8/artifacts/model"
-    )
-)
-
-"""
-Model loading configuration
-
-In production, uses model copied to container at build time
-"""
-
-#load the model in MLflow pyfunc format, ensure compatibility
-_model = None
-
-def load_model():
-    global _model
-    if _model is None:
-        _model = mlflow.pyfunc.load_model(MODEL_DIR)
-    return _model
-
-#load the feature file
-FEATURE_FILE = os.getenv(
-    "FEATURE_FILE",
-    os.path.join(
-        BASE_DIR,
-        "model/003f949ba8c3439b9fc053f162f98ba8/artifacts/feature_columns.txt"
-    )
-)
-
-try:
-    with open(FEATURE_FILE, "r") as f:
-        FEATURE_COLS = [line.strip() for line in f if line.strip()]
-
-    print(f"Loaded {len(FEATURE_COLS)} feature columns")
-
-except Exception as e:
-    raise Exception(f"Failed to load feature columns from {FEATURE_FILE}: {e}")
-
-#mappings must exactly math those used in training
-BINARY_MAP = {
-    "paperless_billing": {"No": 0, "Yes": 1},     
-}
-
-NUMERIC_COLS = ["gender", "education", "marital_status", "contract", "payment_method"]
-
-"""
-This function 
-    Ensures that the features are transformed exactly as they were during training
-    Prevent train/serve skew
-
-Transformation Pipeline
-    Clean column name and handle data types
-    Binary encoding
-    One hot encoding
-    Convert boolean to integers
-    Align features with training schema and order
-"""
-
-def _serve_transform(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
-    
-    df.columns = df.columns.str.strip()
-    
-    for c in NUMERIC_COLS:
-        if c in df.columns:
-            df[c] = pd.to_numeric(df[c], errors="coerce")
-            df[c] = df[c].fillna(0)
-    
-    for c, mapping in BINARY_MAP.items():
-        if c in df.columns:
-            df[c] = (
-                df[c]
-                .astype(str)                 
-                .str.strip()                 
-                .map(mapping)                
-                .astype("Int64")             
-                .fillna(0)                    
-                .astype(int)                  
-            )
-    
-    obj_cols = [c for c in df.select_dtypes(include=["object"]).columns]
-    if obj_cols:
-        df = pd.get_dummies(df, columns=obj_cols, drop_first=True)
-    
-    bool_cols = df.select_dtypes(include=["bool"]).columns
-    if len(bool_cols) > 0:
-        df[bool_cols] = df[bool_cols].astype(int)
-    
-    df = df.reindex(columns=FEATURE_COLS, fill_value=0)
-
-    for col in df.columns:
-        if df[col].dtype == "int64":
-            df[col] = df[col].astype("int32")
-        elif df[col].dtype == "float64":
-            df[col] = df[col].astype("float32")
-    
-    return df
+from src.serving.preprocessing import preprocess
+from src.serving.model_loader import load_model
 
 """
 This is the main prediction function for customer churn inference
@@ -132,13 +31,14 @@ Pipeline:
     Convert prediction to user-friendly string
 """
 
-def predict(input_dict: dict) -> str:
+def predict(input_dict: dict, request_id: Optional[str] = None) -> str:
     
     #convert input to dataframe
     df = pd.DataFrame([input_dict])
     
     #feature transformation
-    df_enc = _serve_transform(df)
+    logger.info(f"[{request_id}] Starting preprocessing")
+    df_enc = preprocess(df)
     
     # Match MLflow expected schema exactly
     int64_cols = [
@@ -183,8 +83,17 @@ def predict(input_dict: dict) -> str:
 
     #generate prediction
     try:
+        logger.info("Loading model for inference")
+
+        logger.info(f"[{request_id}] Loading model")
         model = load_model()
+
+        logger.info(f"Input shape: {df_enc.shape}")
+        
+        logger.info(f"[{request_id}] Running prediction")
         preds = model.predict(df_enc)
+
+        logger.info(f"Prediction generated: {preds}")
         
         if hasattr(preds, "tolist"):
             preds = preds.tolist()  
@@ -195,6 +104,8 @@ def predict(input_dict: dict) -> str:
             result = preds
             
     except Exception as e:
+        logger.exception("Prediction pipeline failed")
+
         raise Exception(f"Model prediction failed: {e}")
     
     #convert binary prediction output to business language
@@ -202,3 +113,5 @@ def predict(input_dict: dict) -> str:
         return "Likely to churn"     
     else:
         return "Not likely to churn" 
+    
+    logger.info(f"[{request_id}] Prediction completed: {result}")

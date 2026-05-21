@@ -4,6 +4,9 @@ import gradio as gr
 
 #Inference logic behind the machine learning
 from src.serving.inference import predict 
+import uuid
+from src.utils.logger import logger
+from src.utils.prediction_logger import log_prediction
 
 # Initialize FastAPI application
 app = FastAPI(
@@ -68,13 +71,36 @@ The output should be either:
     Prediction: Unlikely to churn
     Error: Prediction fails
 """
+
 @app.post("/predict")
 def get_prediction(data: CustomerData):
+
+    request_id = str(uuid.uuid4())[:8]
+
     try:
-        result = predict(data.dict())
-        return {"prediction": result}
+        payload = data.model_dump()
+
+        logger.info(f"[{request_id}] Received prediction request")
+
+        result = predict(payload, request_id)
+
+        logger.info(f"[{request_id}] Prediction response: {result}")
+
+        log_prediction(request_id, payload, result)
+
+        return {
+            "request_id": request_id,
+            "prediction": result
+        }
+
     except Exception as e:
-        return {"error": str(e)}
+
+        logger.exception(f"[{request_id}] Prediction endpoint failed")
+
+        return {
+            "request_id": request_id,
+            "error": str(e)
+        }
     
 from src.ui.gradio_app import demo
 import gradio as gr

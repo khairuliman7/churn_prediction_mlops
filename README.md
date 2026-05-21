@@ -1,67 +1,107 @@
-Customer Churn – End-to-End ML Project
+# 🚀 Customer Churn Prediction – End-to-End MLOps Project
 
-Business Problem 
+> **Can we predict which customers are about to leave — before they actually do?**  
+This project builds a complete machine learning system that not only predicts customer churn but also deploys the model as a production-ready API with Docker and CI/CD automation.
 
-Telecommunications companies face significant customer attrition (churn) that directly impacts revenue. Predicting which customers are likely to churn allows businesses to implement targeted retention strategies, optimize marketing spend, and improve customer lifetime value.
+It demonstrates an end-to-end MLOps workflow: from data preprocessing and model training to deployment, monitoring, and continuous integration.
 
-Purpose
+---
 
-Build and ship a full machine-learning solution for predicting customer churn in a telecom setting—from data prep and modeling to an API + web UI deployed on AWS.
+## 📌 Project Overview
 
-Problem solved & benefits
+Customer churn is one of the most critical problems in subscription-based businesses.  
+The goal of this project is to:
 
-Faster decisions: Predicts which customers are likely to churn so teams can act before they leave.
-Operationalized ML: Model is accessible via a REST API and a simple UI; anyone can test it without notebooks.
-Repeatable delivery: CI/CD + containers mean every change can be rebuilt, tested, and redeployed in a consistent way.
-Traceable experiments: MLflow tracks runs, metrics, and artifacts for reproducibility and auditing.
+- Predict whether a customer will churn (binary classification)
+- Deploy the trained model as a scalable REST API
+- Containerize the application using Docker
+- Implement CI/CD for automated builds and deployment
+- Add lightweight prediction tracking for monitoring usage
 
-What I built
+This project is designed as a **practical MLOps pipeline**, not just a standalone ML model.
 
-Data & Modeling: Feature engineering + XGBoost classifier; experiments logged to MLflow.
-Model tracking: Runs, metrics, and the serialized model logged under a named MLflow experiment.
-Inference service: FastAPI app exposing /predict (POST) and a root health check /.
-Web UI: Gradio interface mounted at /ui for quick, shareable manual testing.
-Containerization: Docker image with uvicorn entrypoint (src.app.main:app) listening on port 8000.
-CI/CD: GitHub Actions builds the image and pushes to Docker Hub; optionally triggers an ECS service update.
-Orchestration: AWS ECS Fargate runs the container (serverless).
-Networking: Application Load Balancer (ALB) on HTTP:80 forwarding to a Target Group (IP targets on HTTP:8000).
-Security: Security groups scoped to allow ALB inbound 80 from the internet, and task inbound 8000 from the ALB SG.
-Observability: CloudWatch Logs for container stdout/stderr and ECS service events.
+---
 
-Deployment flow (high-level)
+## 🧠 Key Features
 
-Push to main → GitHub Actions builds the Docker image and pushes it to Docker Hub.
-ECS service is updated (manually or via the workflow) to force a new deployment.
-ALB health checks hit / on port 8000; once healthy, traffic is routed to the new task.
-Users call POST /predict or open the Gradio UI at /ui via the ALB DNS.
-Roadblocks & how we solved them
+- End-to-end ML pipeline (data → training → inference)
+- REST API using **FastAPI**
+- Dockerized application for portability
+- CI/CD pipeline using GitHub Actions
+- Prediction tracking system (mini monitoring layer)
+- Structured project architecture for scalability
+- JSON-based inference API
+- Model persistence (saved and loaded for inference)
 
-Unhealthy targets behind ALB
+---
 
-Cause: App didn’t respond at the health-check path; listener/target port mismatches.
-Fixes: Added GET / health endpoint; confirmed ALB listener on 80 forwards to TG on 8000; TG health check path set to /.
+## 🏗️ System Architecture
 
-Module import error in container (ModuleNotFoundError: serving)
+User Request
+↓
+FastAPI Endpoint (/predict)
+↓
+Preprocessing Pipeline
+↓
+Trained ML Model (loaded at startup)
+↓
+Prediction Output (Churn / Not Churn)
+↓
+Logging / Tracking System
 
-Cause: Python path in the image didn’t include src/.
-Fixes: Set PYTHONPATH=/app/src in the Dockerfile; corrected uvicorn app path to src.app.main:app.
 
-ALB DNS timing out
+---
 
-Cause: Security group rules not aligned with traffic flow.
-Fixes: ALB SG allows inbound 80 from 0.0.0.0/0; task SG allows inbound 8000 from the ALB SG; outbound open.
+## 📁 Project Structure
 
-ECS redeploy not picking up the new image
+Customer Churn/
+│
+│
+├── code
+│ ├── Code.ipynb 
+│
+├──scripts
+│ ├── main_pipeline.py # Pipeline
+│
+├── src/
+│ ├── app/
+│ │ └── main.py # FastAPI application
+│ │
+│ ├── model/
+│ │ ├── train.py # Model training pipeline
+│ │ ├── predict.py # Inference logic
+│ │ └── artifacts/ # Saved model files
+│ │
+│ ├── utils/
+│ │ └── preprocessing.py # Data preprocessing steps
+│
+├── .gitignore
+├── Dockerfile # Container setup
+├── requirements.txt # Dependencies
+├── .github/workflows/
+│ └── ci.yml # CI/CD pipeline
+└── README.md
 
-Cause: Service still running previous task definition.
-Fixes: Force new deployment (CLI or console) after pushing the new image; optional step added to CI.
 
-Gradio UI error (“No runs found in experiment”)
+---
 
-Cause: Inference/UI expected an MLflow-logged model but couldn’t resolve a run.
-Fixes: Standardized MLflow experiment name and model logging in training; inference loads the logged model consistently (and a local path for dev).
+## ⚙️ Tech Stack
 
-Local testing vs. prod paths
+- Python 🐍
+- FastAPI
+- Scikit-learn / ML models
+- Pandas, NumPy
+- Docker
+- GitHub Actions (CI/CD)
+- Uvicorn (API server)
 
-Cause: MLflow artifact URIs differ locally vs. in container.
-Fixes: For local dev, load via direct ./mlruns/.../artifacts/model; in prod, container loads the packaged model path used at build time.
+---
+
+## 📊 Model Lifecycle
+Data preprocessing and feature engineering
+Model training using classification algorithms
+Model evaluation and selection
+Model serialization (saved artifact)
+Loaded at API startup for inference
+Monitoring and Logging
+CI/CD pipeline
